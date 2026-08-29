@@ -96,7 +96,8 @@ const { keepAliveExclude, opened } = storeToRefs(useWorktabStore());
 /** 多标签开启时：仅已打开且允许缓存的标签组件名进入 include；关闭多标签时不传 include，避免 opened 过窄误伤缓存。 */
 const keepAliveInclude = computed(() => {
   if (!showWorkTab.value) return undefined;
-  const names = new Set<string>();
+  // 嵌套目录（dashboard/*、fastlink/*）的外层缓存对象是 NestedRouterParent，须始终放行，否则多标签模式下嵌套页缓存不生效
+  const names = new Set<string>(["NestedRouterParent"]);
   for (const t of opened.value) {
     if (t.name && t.keepAlive !== false) names.add(String(t.name));
   }

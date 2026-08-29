@@ -1,5 +1,7 @@
 <template>
   <div>
+    <!-- 缓存验证测试代码：切换页面后此计数应保留 -->
+    <div class="" @click="count++">{{ count }}</div>
     <ElRow :gutter="20">
       <ElCol :xl="14" :lg="15" :xs="24"><TodaySales /></ElCol>
       <ElCol :xl="10" :lg="9" :xs="24"><VisitorInsights /></ElCol>
@@ -263,6 +265,9 @@ import VolumeServiceLevel from "./modules/volume-service-level.vue";
 import type { LineDataItem } from "@/types/component/chart";
 
 defineOptions({ name: "DashboardAnalysis" });
+
+/** 缓存验证测试代码：验证页面 ref 在切换路由后是否保留 */
+const count = ref(0);
 
 // === 图表演示数据 ===
 const multiLineData: LineDataItem[] = [

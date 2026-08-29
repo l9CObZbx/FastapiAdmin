@@ -18,6 +18,7 @@ export function useAppBootstrap() {
   const bootstrap = () => {
     checkStorageCompatibility();
     toggleTransition(false);
+    if (import.meta.env.VITE_FRONTEND_ONLY === "true") return;
     systemUpgrade();
     startVersionPolling();
     initSiteConfig();

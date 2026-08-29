@@ -10,9 +10,11 @@
  */
 import type { AppRouteRecordRaw } from "@utils";
 import type { AppRouteRecord, RouteMeta } from "@/types/router";
-import { defineComponent, h, onMounted, ref } from "vue";
-import { RouterView, useRoute } from "vue-router";
+import { defineComponent, h, KeepAlive, onMounted, ref } from "vue";
+import { RouterView, useRoute, type RouteLocationNormalizedLoaded } from "vue-router";
+import { storeToRefs } from "pinia";
 import { $t } from "@/locales";
+import { useWorktabStore } from "@stores";
 import LayoutComponent from "@/layouts/index.vue";
 import DashboardWorkplace from "@views/dashboard/workplace/index.vue";
 import DashboardAnalysis from "@views/dashboard/analysis/index.vue";
@@ -127,7 +129,7 @@ export const dashboardLayoutChildren: AppRouteRecordRaw[] = [
     meta: {
       title: "menus.dashboard.analysis",
       icon: "ri:align-item-bottom-line",
-      keepAlive: false,
+      keepAlive: true,
     },
   },
   {
@@ -146,11 +148,30 @@ export const ROOT_LAYOUT_ROUTE_NAME = "RootLayout" as const;
 /** 首页子路由 name（面包屑组件会用） */
 export const HOME_ROUTE_NAME = "Home" as const;
 
-/** 纯 RouterView 占位组件 —— 多级目录只需要嵌一层，不需要实际页面 */
+/**
+ * 纯 RouterView 占位组件 —— 多级目录只需要嵌一层，不需要实际页面。
+ * 内层 KeepAlive：叶子页（如 /dashboard/*）在此渲染，若不加缓存则每次切换页面都会重新挂载、ref 全部丢失。
+ * key 与 fa-page-content 的 routeLeafCacheKey 同一套逻辑（name+params，勿用 fullPath，否则仅 query 变化也会反复挂载）。
+ */
 export const NestedRouterParent = defineComponent({
   name: "NestedRouterParent",
   setup() {
-    return () => h(RouterView);
+    const { keepAliveExclude } = storeToRefs(useWorktabStore());
+    return () =>
+      h(RouterView, null, {
+        default: ({ Component, route }: { Component: any; route: RouteLocationNormalizedLoaded }) => {
+          if (!Component) return null;
+          const page = h(Component, {
+            key:
+              route.name != null
+                ? `${String(route.name)}:${JSON.stringify(route.params ?? {})}`
+                : route.path,
+          });
+          // 显式 keepAlive:false（如数据大屏）不缓存，与 fa-page-content 的语义一致
+          if (route.meta.keepAlive === false) return page;
+          return h(KeepAlive, { max: 10, exclude: keepAliveExclude.value }, { default: () => page });
+        },
+      });
   },
 });
 
