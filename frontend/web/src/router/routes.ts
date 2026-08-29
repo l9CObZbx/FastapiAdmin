@@ -10,7 +10,7 @@
  */
 import type { AppRouteRecordRaw } from "@utils";
 import type { AppRouteRecord, RouteMeta } from "@/types/router";
-import { defineComponent, h, onMounted, ref } from "vue";
+import { defineComponent, h, KeepAlive, onMounted, ref } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { $t } from "@/locales";
 import LayoutComponent from "@/layouts/index.vue";
@@ -127,7 +127,7 @@ export const dashboardLayoutChildren: AppRouteRecordRaw[] = [
     meta: {
       title: "menus.dashboard.analysis",
       icon: "ri:align-item-bottom-line",
-      keepAlive: false,
+      keepAlive: true,
     },
   },
   {
@@ -150,7 +150,17 @@ export const HOME_ROUTE_NAME = "Home" as const;
 export const NestedRouterParent = defineComponent({
   name: "NestedRouterParent",
   setup() {
-    return () => h(RouterView);
+    return () =>
+      h(RouterView, null, {
+        default: ({ Component, route }: { Component: any; route: any }) => {
+          if (!Component) return null;
+
+          const page = h(Component, { key: route.fullPath });
+          if (route.meta.keepAlive === false) return page;
+
+          return h(KeepAlive, { max: 10 }, { default: () => page });
+        },
+      });
   },
 });
 

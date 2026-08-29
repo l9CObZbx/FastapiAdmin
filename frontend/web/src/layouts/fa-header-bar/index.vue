@@ -286,6 +286,7 @@ const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 onMounted(() => {
   initLanguage();
   document.addEventListener("click", bodyCloseNotice);
+  if (import.meta.env.VITE_FRONTEND_ONLY === "true") return;
   noticeStore.getNotice();
   chatStore.initChat();
   chatStore.refreshUnread();

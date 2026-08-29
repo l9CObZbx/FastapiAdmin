@@ -15,28 +15,21 @@
     </div>
 
     <RouterView v-if="isRefresh" v-slot="{ Component, route: router }" :style="contentStyle">
-      <Transition :name="actualTransition" mode="out-in">
-        <div v-if="Component" class="route-view-shell flex min-h-0 min-w-0 w-full flex-1 flex-col">
-          <!-- 是否缓存以后端菜单 keep_alive → meta.keepAlive 为准；此处 !== false 即包 KeepAlive（与 MenuProcessor 一致） -->
-          <KeepAlive
-            v-if="wrapPageWithKeepAlive"
-            :max="10"
-            :include="keepAliveInclude"
-            :exclude="keepAliveExclude"
-          >
-            <component
-              class="fa-page-view min-h-0 min-w-0 w-full flex-1"
-              :is="Component"
-              :key="routeLeafCacheKey(router)"
-            />
-          </KeepAlive>
-          <component
-            v-else
-            class="fa-page-view min-h-0 min-w-0 w-full flex-1"
-            :is="Component"
-            :key="routeLeafCacheKey(router)"
-          />
-        </div>
+      <KeepAlive v-if="wrapPageWithKeepAlive" :max="10" :include="keepAliveInclude" :exclude="keepAliveExclude">
+        <component
+          v-if="Component"
+          class="fa-page-view min-h-0 min-w-0 w-full flex-1"
+          :is="Component"
+          :key="routeLeafCacheKey(router)"
+        />
+      </KeepAlive>
+      <Transition v-else :name="actualTransition" mode="out-in">
+        <component
+          v-if="Component"
+          class="fa-page-view min-h-0 min-w-0 w-full flex-1"
+          :is="Component"
+          :key="routeLeafCacheKey(router)"
+        />
       </Transition>
     </RouterView>
 
@@ -93,10 +86,9 @@ const backtopTargetKey = computed(() => (isNarrowViewport.value ? "win" : "main"
 const { pageTransition, containerWidth, refresh, showWorkTab } = storeToRefs(useSettingsStore());
 const { keepAliveExclude, opened } = storeToRefs(useWorktabStore());
 
-/** 多标签开启时：仅已打开且允许缓存的标签组件名进入 include；关闭多标签时不传 include，避免 opened 过窄误伤缓存。 */
 const keepAliveInclude = computed(() => {
   if (!showWorkTab.value) return undefined;
-  const names = new Set<string>();
+  const names = new Set<string>(["NestedRouterParent"]);
   for (const t of opened.value) {
     if (t.name && t.keepAlive !== false) names.add(String(t.name));
   }

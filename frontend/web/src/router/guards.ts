@@ -21,6 +21,7 @@ import { refreshState } from "./refresh";
 
 /** 全局 loading 状态（用于路由切换时显示加载遮罩） */
 const globalLoading = ref(false);
+const FRONTEND_ONLY = import.meta.env.VITE_FRONTEND_ONLY === "true";
 
 // ──────── 工具函数 ────────
 
@@ -51,6 +52,13 @@ export function setupBeforeEachGuard(router: Router): void {
     // 初始化守卫状态
     if (globalLoading.value) globalLoading.value = false;
     NProgress.start();
+
+    // 本地仅测试前端路由/KeepAlive 时跳过认证与动态菜单接口。
+    // 只应在 frontend/web/.env.development 中启用，不能用于正式环境。
+    if (FRONTEND_ONLY) {
+      if (to.path === "/") return { path: HOME_PAGE_PATH, replace: true };
+      return;
+    }
 
     // 存储失效检查（localStorage 异常时直接登出）
     const storageFailed = checkStorageHealth();

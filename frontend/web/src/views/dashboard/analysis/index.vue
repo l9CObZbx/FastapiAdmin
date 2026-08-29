@@ -1,5 +1,6 @@
 <template>
   <div>
+    <div class="" @click="count++">{{ count }}</div>
     <ElRow :gutter="20">
       <ElCol :xl="14" :lg="15" :xs="24"><TodaySales /></ElCol>
       <ElCol :xl="10" :lg="9" :xs="24"><VisitorInsights /></ElCol>
@@ -263,6 +264,8 @@ import VolumeServiceLevel from "./modules/volume-service-level.vue";
 import type { LineDataItem } from "@/types/component/chart";
 
 defineOptions({ name: "DashboardAnalysis" });
+
+const count = ref(0);
 
 // === 图表演示数据 ===
 const multiLineData: LineDataItem[] = [

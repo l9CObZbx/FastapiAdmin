@@ -91,6 +91,7 @@ const getNoticeIcon = (type: number) =>
   type === 2 ? "ri:megaphone-line" : "ri:notification-3-line";
 
 const fetchNotices = async () => {
+  if (import.meta.env.VITE_FRONTEND_ONLY === "true") return;
   loading.value = true;
   try {
     const res = await NoticeAPI.listNoticeAvailable();
