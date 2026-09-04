@@ -6,7 +6,6 @@
  *
  * 去重：
  * - 同实例：`inFlightDedupePromise` + `inFlightDedupeKey`
- * - 跨实例（同参）：模块级 `globalListNetworkInflight`（布局短时多挂载时合并为一条 HTTP）
  *
  * KeepAlive：`onDeactivated` 会取消请求并置 `tableViewActive`，失活期间 `fetchData` 直接返回当前快照不发 HTTP。
  */
@@ -43,9 +42,6 @@ import {
   type TableError,
 } from "@utils";
 import type { ColumnOption } from "@/types/component";
-
-/** 跨组件实例：同一 dedupeKey 仅一条进行中的网络请求 */
-const globalListNetworkInflight = new Map<string, Promise<TableResponse<unknown>>>();
 
 // --- 类型推导（由 apiFn / 响应类型反推记录类型） ---
 type InferApiParams<T> = T extends (params: infer P) => any ? P : never;
@@ -321,7 +317,6 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
 
   /**
    * 将标准化响应写入本实例的 `data` / `pagination`，并可选写入缓存。
-   * 全局去重时每个参与合并的实例都会各自调用一次。
    */
   function commitNetworkSuccess(
     standardResponse: TableResponse<TRecord>,
@@ -358,7 +353,7 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
 
   /**
    * 列表请求唯一入口：合并参数 → 读缓存或发起 `apiFn`。
-   * 先进单实例去重，再进全局 Map；若已有同键进行中的 Promise，则等待并复用结果。
+   * 同一实例内的同参进行中请求会复用 Promise。
    */
   const fetchData = async (
     params?: Partial<TParams>,
@@ -387,26 +382,6 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
     if (inFlightDedupePromise !== null && inFlightDedupeKey === dedupeKey) {
       logger.log("合并同参进行中的列表请求");
       return inFlightDedupePromise;
-    }
-
-    const sharedGlobal = globalListNetworkInflight.get(dedupeKey);
-    if (sharedGlobal) {
-      loadingState.value = "loading";
-      error.value = null;
-      try {
-        const standardResponse = (await sharedGlobal) as TableResponse<TRecord>;
-        commitNetworkSuccess(standardResponse, requestParams, useCache);
-        return standardResponse;
-      } catch (err) {
-        if (err instanceof Error && err.message === "请求已取消") {
-          loadingState.value = "idle";
-          return { records: [], total: 0, current: 1, size: 10 };
-        }
-        loadingState.value = "error";
-        data.value = [];
-        const tableError = handleError(err, "获取表格数据失败");
-        throw tableError;
-      }
     }
 
     if (!tableViewActive) {
@@ -476,13 +451,6 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
           }
         }
       })();
-
-      globalListNetworkInflight.set(dedupeKey, networkPromise as Promise<TableResponse<unknown>>);
-      networkPromise
-        .finally(() => {
-          globalListNetworkInflight.delete(dedupeKey);
-        })
-        .catch(() => {}); // 忽略取消/reject，仅用于清理全局 Map
 
       inFlightDedupePromise = networkPromise;
 
